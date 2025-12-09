@@ -49,9 +49,9 @@ pipeline {
                         'analytics-service', 'api-gateway'
                     ]
                     
-                    services.each { service ->
-                        dir("microservices/${service}") {
-                            bat "docker build -t revcart-${service}:latest ."
+                    dir('microservices') {
+                        services.each { service ->
+                            bat "docker build -f ${service}/Dockerfile -t revcart-${service}:latest ."
                         }
                     }
                     
