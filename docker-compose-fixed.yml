@@ -6,7 +6,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
     ports:
-      - "3307:3306"
+      - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
@@ -113,10 +113,13 @@ services:
       - "8084:8084"
     environment:
       - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/revcart_cart
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
       - SPRING_CLOUD_CONSUL_HOST=consul
       - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=cart-service
     depends_on:
       - mongodb
+      - redis
       - consul
     networks:
       - revcart-network
@@ -204,10 +207,16 @@ services:
     ports:
       - "8089:8089"
     environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/revcart_admin?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
       - SPRING_CLOUD_CONSUL_HOST=consul
       - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=admin-service
     depends_on:
-      - consul
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
     networks:
       - revcart-network
 
