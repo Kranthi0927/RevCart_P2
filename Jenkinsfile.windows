@@ -1,0 +1,82 @@
+pipeline {
+    agent any
+    
+    tools {
+        maven 'Maven-3.9'
+        nodejs 'NodeJS-18'
+        jdk 'JDK-17'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'master',
+                    url: 'https://github.com/Kranthi0927/RevCart_P2.git'
+            }
+        }
+        
+        stage('Build Backend') {
+            steps {
+                dir('microservices') {
+                    bat 'mvn clean package -DskipTests'
+                }
+            }
+        }
+        
+        stage('Build Frontend') {
+            steps {
+                dir('revcart-frontend') {
+                    bat 'npm install'
+                    bat 'npm run build'
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                dir('microservices') {
+                    bat 'mvn test'
+                }
+            }
+        }
+        
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    def services = [
+                        'auth-service', 'user-service', 'product-service',
+                        'cart-service', 'order-service', 'payment-service',
+                        'notification-service', 'delivery-service', 'admin-service',
+                        'analytics-service', 'api-gateway'
+                    ]
+                    
+                    services.each { service ->
+                        dir("microservices/${service}") {
+                            bat "docker build -t revcart-${service}:${BUILD_NUMBER} ."
+                        }
+                    }
+                    
+                    dir('revcart-frontend') {
+                        bat "docker build -t revcart-frontend:${BUILD_NUMBER} ."
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                echo 'Deploying application...'
+                // Add deployment commands here
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Build completed successfully!'
+        }
+        failure {
+            echo 'Build failed!'
+        }
+    }
+}
