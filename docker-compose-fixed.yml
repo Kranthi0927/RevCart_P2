@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Infrastructure Services
   mysql:
     image: mysql:8.0
     environment:
@@ -12,6 +11,11 @@ services:
       - mysql-data:/var/lib/mysql
     networks:
       - revcart-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mongodb:
     image: mongo:6.0
@@ -36,20 +40,10 @@ services:
     networks:
       - revcart-network
 
-  # Microservices
-  api-gateway:
-    build: ./microservices/api-gateway
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_CLOUD_CONSUL_HOST=consul
-    depends_on:
-      - consul
-    networks:
-      - revcart-network
-
   auth-service:
-    build: ./microservices/auth-service
+    build:
+      context: ./microservices
+      dockerfile: auth-service/Dockerfile
     ports:
       - "8081:8081"
     environment:
@@ -58,46 +52,69 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/revcart_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
       - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=auth-service
+      - SPRING_CLOUD_CONSUL_DISCOVERY_IP-ADDRESS=auth-service
     depends_on:
-      - mysql
-      - consul
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
     networks:
       - revcart-network
 
   user-service:
-    build: ./microservices/user-service
+    build:
+      context: ./microservices
+      dockerfile: user-service/Dockerfile
     ports:
       - "8082:8082"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/revcart_user?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
       - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=user-service
     depends_on:
-      - mysql
-      - consul
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
     networks:
       - revcart-network
 
   product-service:
-    build: ./microservices/product-service
+    build:
+      context: ./microservices
+      dockerfile: product-service/Dockerfile
     ports:
       - "8083:8083"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/revcart_product?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
       - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=product-service
     depends_on:
-      - mysql
-      - consul
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
     networks:
       - revcart-network
 
   cart-service:
-    build: ./microservices/cart-service
+    build:
+      context: ./microservices
+      dockerfile: cart-service/Dockerfile
     ports:
       - "8084:8084"
     environment:
       - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/revcart_cart
       - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=cart-service
     depends_on:
       - mongodb
       - consul
@@ -105,38 +122,55 @@ services:
       - revcart-network
 
   order-service:
-    build: ./microservices/order-service
+    build:
+      context: ./microservices
+      dockerfile: order-service/Dockerfile
     ports:
       - "8085:8085"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/revcart_order?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
       - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=order-service
     depends_on:
-      - mysql
-      - consul
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
     networks:
       - revcart-network
 
   payment-service:
-    build: ./microservices/payment-service
+    build:
+      context: ./microservices
+      dockerfile: payment-service/Dockerfile
     ports:
       - "8086:8086"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/revcart_payment?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
       - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=payment-service
     depends_on:
-      - mysql
-      - consul
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
     networks:
       - revcart-network
 
   notification-service:
-    build: ./microservices/notification-service
+    build:
+      context: ./microservices
+      dockerfile: notification-service/Dockerfile
     ports:
       - "8087:8087"
     environment:
       - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/revcart_notification
       - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=notification-service
     depends_on:
       - mongodb
       - consul
@@ -144,48 +178,66 @@ services:
       - revcart-network
 
   delivery-service:
-    build: ./microservices/delivery-service
+    build:
+      context: ./microservices
+      dockerfile: delivery-service/Dockerfile
     ports:
       - "8088:8088"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/revcart_delivery?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
       - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=delivery-service
     depends_on:
-      - mysql
-      - consul
+      mysql:
+        condition: service_healthy
+      consul:
+        condition: service_started
     networks:
       - revcart-network
 
   admin-service:
-    build: ./microservices/admin-service
+    build:
+      context: ./microservices
+      dockerfile: admin-service/Dockerfile
     ports:
       - "8089:8089"
     environment:
       - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=admin-service
     depends_on:
       - consul
     networks:
       - revcart-network
 
   analytics-service:
-    build: ./microservices/analytics-service
+    build:
+      context: ./microservices
+      dockerfile: analytics-service/Dockerfile
     ports:
       - "8090:8090"
     environment:
       - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/revcart_analytics
       - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=analytics-service
     depends_on:
       - mongodb
       - consul
     networks:
       - revcart-network
 
-  frontend:
-    build: ./revcart-frontend
+  api-gateway:
+    build:
+      context: ./microservices
+      dockerfile: api-gateway/Dockerfile
     ports:
-      - "80:80"
+      - "8080:8080"
+    environment:
+      - SPRING_CLOUD_CONSUL_HOST=consul
+      - SPRING_CLOUD_CONSUL_DISCOVERY_HOSTNAME=api-gateway
     depends_on:
-      - api-gateway
+      - consul
     networks:
       - revcart-network
 
